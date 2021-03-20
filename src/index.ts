@@ -1,6 +1,6 @@
 import cookieParser from 'cookie-parser'
 import logger from 'morgan'
-import express = require('express');
+import express from 'express'
 import { PORT, STATIC } from './utilities/config';
 
 const indexRouter = require('./routes/index');

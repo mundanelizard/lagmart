@@ -11,38 +11,132 @@ generator client {
 }
 
 // try to set up schema for the database
-
-
 model User {
+  id           String       @id @default(uuid())
+  first_name   String
+  last_name    String
+  email        String       @unique
+  password     String
+  role         Role         @default(USER)
+  created_at   DateTime     @default(now())
+  update_at    DateTime     @updatedAt
+  deleted      Boolean      @default(false)
+  auth         Auth[]
+  order_groups OrderGroup[]
+  ratings      Rating[]
+  redeemed     Redeem[]
+  comments     Comment[]
+}
 
+model Auth {
+  id            Int    @id @default(autoincrement())
+  user          User   @relation(fields: [user_id], references: [id])
+  user_id       String
+  access_token  String
+  refresh_token String
 }
 
 model Wishlist {
-
+  id            Int     @id @default(autoincrement())
+  product       Product @relation(fields: [product_id], references: [id])
+  product_id    Int
+  wishlist_name String  @default("default")
 }
 
 model Category {
-
+  id            Int       @id @default(autoincrement())
+  category_name String
+  products      Product[]
 }
 
 model Invoice {
-
+  id             Int        @id @default(autoincrement())
+  payment_id     String
+  quantity       Int
+  total          Int
+  order          OrderGroup @relation(fields: [order_group_id], references: [id])
+  order_group_id Int
 }
 
 model Order {
+  id             Int        @id @default(autoincrement())
+  order_group    OrderGroup @relation(fields: [order_group_id], references: [id])
+  order_group_id Int
+  product        Product    @relation(fields: [product_id], references: [id])
+  product_id     Int
+  quantity       Int
+  status         Status     @default(PENDING)
+}
 
+model OrderGroup {
+  id           Int       @id @default(autoincrement())
+  date         DateTime  @default(now())
+  orders       Order[]
+  invoice      Invoice[]
+  address      String
+  first_name   String
+  last_name    String
+  phone_number String
+  user         User      @relation(fields: [user_id], references: [id])
+  user_id      String
 }
 
 model Discount {
+  id            Int      @id @default(autoincrement())
+  discount_code String
+  discount_name String
+  percent       Int
+  created       DateTime @default(now())
+  ends          DateTime
+  redeemer      Redeem[]
+}
 
+model Redeem {
+  id          Int      @id @default(autoincrement())
+  user        User     @relation(fields: [user_id], references: [id])
+  user_id     String
+  discount    Discount @relation(fields: [discount_id], references: [id])
+  discount_id Int
+}
+
+model Cart {
+  id         Int     @id @default(autoincrement())
+  product    Product @relation(fields: [product_id], references: [id])
+  product_id Int
+  quantity   Int
 }
 
 model Product {
-
+  id          Int        @id @default(autoincrement())
+  title       String
+  excerpt     String
+  name        String
+  price       String
+  discount    Int        @default(0)
+  wishlist    Wishlist[]
+  cart        Cart[]
+  order       Order[]
+  category    Category   @relation(fields: [category_id], references: [id])
+  category_id Int
+  comments    Comment[]
+  rating      Rating[]
 }
 
-model Address {
+model Rating {
+  id         Int     @id @default(autoincrement())
+  user       User    @relation(fields: [user_id], references: [id])
+  user_id    String
+  rating     Int
+  product    Product @relation(fields: [product_id], references: [id])
+  product_id Int
+}
 
+model Comment {
+  id         Int     @id @default(autoincrement())
+  user       User    @relation(fields: [user_id], references: [id])
+  user_id    String
+  product    Product @relation(fields: [product_id], references: [id])
+  product_id Int
 }
 
 enum Status {
@@ -52,7 +146,7 @@ enum Status {
   FUFILLED
 }
 
-enum Access_Level {
+enum Role {
   USER
   SUPER
   ADMIN
