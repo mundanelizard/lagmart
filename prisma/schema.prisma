@@ -10,6 +10,9 @@ generator client {
   provider = "prisma-client-js"
 }
 
+// try to set up schema for the database
+
+
 model User {
 
 }
