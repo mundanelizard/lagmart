@@ -7,7 +7,6 @@
     "lib": [
       "esnext"
     ],
-    "esModuleInterop": true,
-    "outFile": "./dist/index.js"
+    "esModuleInterop": true
   }
 }
