@@ -26,6 +26,7 @@ model User {
   ratings      Rating[]
   redeemed     Redeem[]
   comments     Comment[]
+  wishlists    Wishlist[]
 }
 
 model Auth {
@@ -41,6 +42,8 @@ model Wishlist {
   product       Product @relation(fields: [product_id], references: [id])
   product_id    Int
   wishlist_name String  @default("default")
+  user          User    @relation(fields: [user_id], references: [id])
+  user_id       String
 }
 
 model Category {
@@ -106,20 +109,38 @@ model Cart {
   quantity   Int
 }
 
+model Item {
+  id          Int         @id @default(autoincrement())
+  title       String
+  description String
+  price       String
+  ItemGroup   ItemGroup[]
+}
+
+model ItemGroup {
+  id         Int     @id @default(autoincrement())
+  item       Item    @relation(fields: [item_id], references: [id])
+  item_id    Int
+  product    Product @relation(fields: [item_id], references: [id])
+  product_id Int
+}
+
 model Product {
-  id          Int        @id @default(autoincrement())
+  id          Int         @id @default(autoincrement())
   title       String
   excerpt     String
   name        String
   price       String
-  discount    Int        @default(0)
+  discount    Int         @default(0)
   wishlist    Wishlist[]
   cart        Cart[]
   order       Order[]
-  category    Category   @relation(fields: [category_id], references: [id])
+  category    Category    @relation(fields: [category_id], references: [id])
   category_id Int
   comments    Comment[]
   rating      Rating[]
+  stock       Int[]
+  ItemGroup   ItemGroup[]
 }
 
 model Rating {
