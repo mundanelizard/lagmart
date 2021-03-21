@@ -1,12 +1,20 @@
 {
   "compilerOptions": {
+    "target": "es6",
+    "module": "commonjs",
     "sourceMap": true,
     "outDir": "./dist",
-    "rootDir": "./",
     "strict": true,
     "lib": [
       "esnext"
     ],
     "esModuleInterop": true
-  }
+  },
+  "exclude": [
+    "node_modules"
+  ],
+  "include": [
+    "./src/**/*.tsx",
+    "./src/**/*.ts"
+  ]
 }

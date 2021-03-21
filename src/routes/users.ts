@@ -1,4 +1,4 @@
-var express = require('express');
+import express from "express"
 var router = express.Router();
 
 /* GET users listing. */
@@ -6,4 +6,4 @@ router.get('/', function(_req: any, res: { send: (arg0: string) => void; }, _nex
   res.send('respond with a resource');
 });
 
-module.exports = router;
+export default router;

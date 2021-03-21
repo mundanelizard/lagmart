@@ -3,8 +3,8 @@ import logger from 'morgan'
 import express from 'express'
 import { PORT, STATIC } from './utilities/config';
 
-const indexRouter = require('./routes/index');
-const usersRouter = require('./routes/users');
+import indexRouter from './routes/index';
+import usersRouter from './routes/users';
 
 const app = express();
 
