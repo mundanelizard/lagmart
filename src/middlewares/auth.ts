@@ -14,6 +14,6 @@ declare global {
 }
 
 export default (req:Express.Request, res: Express.Response, next: () => void) => {
-  req.auth = { id: "id", first_name: "first_name", "last_name": "last_name", "role": "user"}
+  req.auth = { first_name: "samuel", "last_name": "omohan", "id": "user_id", "role": "SUPER"}
   next()
 }
