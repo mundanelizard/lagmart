@@ -5,6 +5,7 @@ import prisma from "../utilities/db";
 import { sendValidationMail, validateEmail, validateName } from "../utilities/helpers";
 import { hash } from 'bcrypt'
 import { SALT_ROUNDS } from "../utilities/consts";
+import { FAILED_SIGNUP_REDIRECT, SUCCESS_SIGNUP_REDIRECT } from "../utilities/config";
 var router = express.Router();
 
 
@@ -88,11 +89,43 @@ router.post("/create", auth, async (req, res) => {
       data: null
     })
   } catch (error) {
-    res.send({
+    res.status(400).send({
       error: true,
       message: error.message,
       data: null
     })
+  }
+})
+
+/* Validate a Users */
+router.get("/validate", async (req, res) => {
+  try {
+    const { email, id } = req.query
+
+    if (typeof email !== "string") {
+      throw new Error("Expected a valid 'email' address as a query.")
+    } else if (!Number(id)) {
+      throw new Error("Expected a valid 'id' as a query.")
+    }
+
+    await prisma.userValidation.delete({
+      where: {
+        id: Number(id)
+      }
+    })
+
+    await prisma.user.update({
+      where: {
+        email: email as string,
+      },
+      data: {
+        status: "ACTIVE"
+      }
+    })
+
+    res.redirect(SUCCESS_SIGNUP_REDIRECT as string)
+  } catch (error) {
+    res.status(301).redirect(FAILED_SIGNUP_REDIRECT as string)
   }
 })
 

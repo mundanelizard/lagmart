@@ -5,3 +5,9 @@ export interface SignupRequestBody {
   password: string,
   role?: "ADMIN" | "USER" | "VENDOR" | "SUPER"
 }
+
+
+export interface ValidateUserQuery {
+  email: string,
+  id: string
+}
