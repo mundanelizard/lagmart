@@ -1,18 +1,18 @@
 import express from "express"
-import auth, { AuthObject } from "../middlewares/auth";
+import { AuthObject, mandatoryAuth, optionalAuth } from "../middlewares/auth";
 import { SignupRequestBody, SigninRequestBody } from "../types";
 import prisma from "../utilities/db";
 import { sendValidationMail, validateEmail, validateName } from "../utilities/helpers";
 import { compare, hash } from 'bcrypt'
 import { SALT_ROUNDS } from "../utilities/consts";
 import { ACCESS_TOKEN_SECRET, FAILED_SIGNUP_REDIRECT, REFRESH_TOKEN_SECRET, SUCCESS_SIGNUP_REDIRECT } from "../utilities/config";
-import { verify, sign, JsonWebTokenError } from "jsonwebtoken";
+import { verify, sign } from "jsonwebtoken";
 var router = express.Router();
 
 
 
 /* GET users listing. */
-router.post("/", auth, async (req, res) => {
+router.post("/", mandatoryAuth, async (req, res) => {
   try {
     const user = await prisma.user.findUnique({
       where: {
@@ -31,7 +31,7 @@ router.post("/", auth, async (req, res) => {
 
 
 /* Create a user with role */
-router.post("/create", auth, async (req, res) => {
+router.post("/create", optionalAuth, async (req, res) => {
   try {
     const { first_name, last_name, email, password, role }: SignupRequestBody = req.body
 
@@ -99,7 +99,7 @@ router.post("/create", auth, async (req, res) => {
   }
 })
 
-/* Validate a Users */
+/* Validate a user email */
 router.get("/validate", async (req, res) => {
   try {
     const { email, id } = req.query
@@ -131,7 +131,8 @@ router.get("/validate", async (req, res) => {
   }
 })
 
-router.post("/signin", auth, async (req, res) => {
+/* Signs a user in to the application */
+router.post("/signin", optionalAuth, async (req, res) => {
   try {
     if (req.auth) {
       throw new Error("Please signout before attempting to login as new user.")
@@ -183,6 +184,54 @@ router.post("/signin", auth, async (req, res) => {
 
   } catch (error) {
     res.status(400).send({
+      message: error.message,
+      error: true,
+      data: null
+    })
+  }
+})
+
+router.post("refresh_token", async (req, res) => {
+  try {
+    const oldRefreshToken = req.cookies.refresh_token as string
+    const auth = verify(oldRefreshToken, REFRESH_TOKEN_SECRET as string) as AuthObject
+
+    const accessToken = sign(auth, ACCESS_TOKEN_SECRET as string, { expiresIn: "30m" })
+    const refreshToken = sign(auth, REFRESH_TOKEN_SECRET as string, { expiresIn: "30d" })
+
+    const prevAuth = await prisma.auth.findFirst({
+      where: {
+        refresh_token: oldRefreshToken
+      }
+    })
+
+    if (!prevAuth) {
+      throw new Error("Fraudalent refresh_token.")
+    }
+
+    await prisma.auth.update({
+      where: {
+        id: prevAuth.id
+      },
+      data: {
+        access_token: accessToken,
+        refresh_token: refreshToken
+      }
+    })
+    
+    res.cookie("refresh_token", refreshToken, {
+      path: "/users/refresh_token",
+      httpOnly: true,
+    });
+
+    res.send({
+      message: "Successfully refreshed user token.",
+      error: false,
+      data: accessToken
+    })
+    
+  } catch(error) {
+    res.send({
       message: error.message,
       error: true,
       data: null
