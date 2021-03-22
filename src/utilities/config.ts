@@ -11,3 +11,5 @@ export const EMAIL_SIGNOUT = process.env.EMAIL_SIGNOUT
 export const BASE_API = process.env.BASE_API
 export const FAILED_SIGNUP_REDIRECT = process.env.FAILED_SIGNUP_REDIRECT
 export const SUCCESS_SIGNUP_REDIRECT = process.env.SUCCESS_SIGNUP_REDIRECT
+export const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET
+export const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET

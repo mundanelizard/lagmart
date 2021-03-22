@@ -2,12 +2,7 @@ import mailer from "@sendgrid/mail"
 import { SENDGRID_API_KEY, VALIDATION_EMAIL_CONCLUSION, VALIDATION_EMAIL_GREETING, EMAIL_SIGNOUT, BASE_API } from "./config";
 import db from "./db";
 
-if (!SENDGRID_API_KEY) {
-  console.log("Please provide a SENDGRID_API_KEY in root folder .env file or set one in /src/utilities/config")
-  process.exit(1)
-}
-
-mailer.setApiKey(SENDGRID_API_KEY)
+mailer.setApiKey(SENDGRID_API_KEY as string)
 
 
 export function validateName(name: string) {
