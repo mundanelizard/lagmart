@@ -12,12 +12,30 @@ var router = express.Router();
 
 
 /* GET users listing. */
-router.post("/", mandatoryAuth, async (req, res) => {
+router.get("/:id", mandatoryAuth, async (req, res) => {
   try {
-    const user = await prisma.user.findUnique({
+    const user = await prisma.user.findFirst({
       where: {
-        id: "string"
+        id: req.params.id
+      },
+      select: {
+        id: true,
+        auth: false,
+        email: true,
+        created_at: true,
+        update_at: true,
+        password: false,
+        first_name: true,
+        last_name: true,
+        status: true,
+        role: true,
       }
+    })
+
+    res.send({
+      error: false,
+      message: "Successfully retrieved user.",
+      data: user
     })
 
   } catch (error) {
@@ -237,6 +255,10 @@ router.post("refresh_token", async (req, res) => {
       data: null
     })
   }
+})
+
+router.delete("/:id", mandatoryAuth, async (req, res) => {
+
 })
 
 export default router;

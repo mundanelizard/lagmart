@@ -20,7 +20,7 @@ declare global {
 
 export const optionalAuth = async (req: Request, res: Response, next: () => void) => {
   try {
-    const authorization = req.headers["Authorization"] as string
+    const authorization = req.headers["authorization"] as string
     if (!authorization) {
       return next()
     }
@@ -57,7 +57,8 @@ export const optionalAuth = async (req: Request, res: Response, next: () => void
 
 export const mandatoryAuth = async (req: Request, res: Response, next: () => void) => {
   try {
-    const authorization = req.headers["Authorization"] as string
+    const authorization = req.headers["authorization"] as string
+    
     if (!authorization) {
       throw new Error("Authentication is mandatory to access this endpoint.")
     }
