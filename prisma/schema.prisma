@@ -12,15 +12,15 @@ generator client {
 
 // try to set up schema for the database
 model User {
-  id           String       @id @default(uuid())
+  id           String        @id @default(uuid())
   first_name   String
   last_name    String
-  email        String       @unique
+  email        String        @unique
   password     String
-  role         Role         @default(USER)
-  created_at   DateTime     @default(now())
-  update_at    DateTime     @updatedAt
-  deleted      Boolean      @default(false)
+  role         Role          @default(USER)
+  created_at   DateTime      @default(now())
+  update_at    DateTime      @updatedAt
+  status       AccountStatus @default(PENDING)
   auth         Auth[]
   order_groups OrderGroup[]
   ratings      Rating[]
@@ -62,15 +62,17 @@ model Invoice {
 }
 
 model Order {
-  id             Int        @id @default(autoincrement())
-  order_group    OrderGroup @relation(fields: [order_group_id], references: [id])
+  id             Int         @id @default(autoincrement())
+  order_group    OrderGroup  @relation(fields: [order_group_id], references: [id])
   order_group_id Int
-  product        Product    @relation(fields: [product_id], references: [id])
+  product        Product     @relation(fields: [product_id], references: [id])
   product_id     Int
   quantity       Int
-  status         Status     @default(PENDING)
+  status         OrderStatus @default(PENDING)
 }
 
+// prefer using this pattern in contrast to prisma many to many.
+// Leave it like this. It helps me map to SQL in my brain
 model OrderGroup {
   id           Int       @id @default(autoincrement())
   date         DateTime  @default(now())
@@ -117,6 +119,8 @@ model Item {
   ItemGroup   ItemGroup[]
 }
 
+// prefer using this pattern in contrast to prisma many to many.
+// Leave it like this. It helps me map to SQL in my brain
 model ItemGroup {
   id         Int     @id @default(autoincrement())
   item       Item    @relation(fields: [item_id], references: [id])
@@ -160,11 +164,18 @@ model Comment {
   product_id Int
 }
 
-enum Status {
+enum OrderStatus {
   CANCELLED
   PENDING
   RETURNED
   FUFILLED
+}
+
+enum AccountStatus {
+  PENDING
+  DELETED
+  ACTIVE
+  INACTIVE
 }
 
 enum Role {
