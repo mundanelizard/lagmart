@@ -27,6 +27,8 @@ model User {
   redeemed     Redeem[]
   comments     Comment[]
   wishlists    Wishlist[]
+  Product      Product[]
+  Item         Item[]
 }
 
 model UserValidation {
@@ -120,7 +122,9 @@ model Item {
   id          Int         @id @default(autoincrement())
   title       String
   description String
-  price       String
+  price       Int
+  user        User        @relation(fields: [user_id], references: [id])
+  user_id     String
   ItemGroup   ItemGroup[]
 }
 
@@ -150,6 +154,8 @@ model Product {
   rating      Rating[]
   stock       Int[]
   ItemGroup   ItemGroup[]
+  user        User        @relation(fields: [user_id], references: [id])
+  user_id     String
 }
 
 model Rating {

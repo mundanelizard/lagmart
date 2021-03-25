@@ -7,8 +7,7 @@ import { compare, hash } from 'bcrypt'
 import { SALT_ROUNDS } from "../utilities/consts";
 import { ACCESS_TOKEN_SECRET, FAILED_SIGNUP_REDIRECT, REFRESH_TOKEN_SECRET, SUCCESS_SIGNUP_REDIRECT } from "../utilities/config";
 import { verify, sign } from "jsonwebtoken";
-var router = express.Router();
-
+const router = express.Router();
 
 
 /* GET users listing. */
@@ -174,6 +173,14 @@ router.post("/signin", optionalAuth, async (req, res) => {
       throw new Error("User with email doesn't exists.")
     } else if (!await compare(password, user.password)) {
       throw new Error("Wrong password.")
+    } else if (user.status === "PENDING") {
+      await sendValidationMail(user.email, user.first_name)
+      throw new Error("Your account is hasn't been verified. A new verification email has been sent to you.")
+    } else if (user.status === "DELETED") {
+      await sendValidationMail(user.email, user.first_name)
+      throw new Error("Your account has been deleted to active it, click on the verification email sent to you.")
+    } else if (user.status === "INACTIVE") {
+      throw new Error("Your account has been deactivated by the administrator. Contact an administrator to activate your account.")
     }
 
     const auth: AuthObject = { first_name: user.first_name, last_name: user.last_name, id: user.id, role: user.role }
@@ -236,7 +243,7 @@ router.post("refresh_token", async (req, res) => {
         refresh_token: refreshToken
       }
     })
-    
+
     res.cookie("refresh_token", refreshToken, {
       path: "/users/refresh_token",
       httpOnly: true,
@@ -247,8 +254,8 @@ router.post("refresh_token", async (req, res) => {
       error: false,
       data: accessToken
     })
-    
-  } catch(error) {
+
+  } catch (error) {
     res.send({
       message: error.message,
       error: true,

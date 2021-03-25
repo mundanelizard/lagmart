@@ -15,3 +15,13 @@ export interface ValidateUserQuery {
   email: string,
   id: string
 }
+
+export interface CreateItemRequestBody {
+  title: string,
+  description: string,
+  price: number
+}
+
+export interface UpdateItemRequestBody extends CreateItemRequestBody  {
+  item_id: number
+}
