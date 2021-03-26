@@ -142,8 +142,8 @@ model Product {
   id          Int         @id @default(autoincrement())
   title       String
   excerpt     String
-  name        String
-  price       String
+  description String
+  price       Int
   discount    Int         @default(0)
   wishlist    Wishlist[]
   cart        Cart[]

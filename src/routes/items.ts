@@ -4,29 +4,12 @@ import { CreateItemRequestBody, UpdateItemRequestBody } from '../types';
 import prisma from '../utilities/db';
 var router = express.Router();
 
-/* Get Component With Name In User Possession */
+/* Get Items in user possession */
 router.get("/vendor", mandatoryAuth, async (req, res) => {
   try {
-
-    if (req.auth?.role !== 'VENDOR') {
-      throw new Error("Only vendors can search vendor product.");
-    }
-
-    const name = req.query.search as string;
-
     const items = await prisma.item.findMany({
       where: {
-        OR: [
-          {
-            description: {
-              contains: name
-            },
-            title: {
-              contains: name
-            }
-          }
-        ],
-        user_id: req.auth.id
+        user_id: req.auth?.id
       }
     })
 
@@ -45,6 +28,62 @@ router.get("/vendor", mandatoryAuth, async (req, res) => {
   }
 })
 
+/* All items */
+router.get("/all", async (req, res) => {
+  try {
+    const items = await prisma.item.findMany({
+      where: {}
+    })
+
+    res.send({
+      error: false,
+      message: "Successfully retrieved data.",
+      data: items
+    })
+
+  } catch (error) {
+    res.send({
+      error: true,
+      message: error.message,
+      data: null
+    })
+  }
+})
+
+/* Search items */
+router.get("/search", async (req, res) => {
+  try {
+    const name = req.query.search as string;
+
+    const items = await prisma.item.findMany({
+      where: {
+        OR: [
+          {
+            description: {
+              contains: name
+            },
+            title: {
+              contains: name
+            }
+          }
+        ]
+      }
+    })
+
+    res.send({
+      error: false,
+      message: "Successfully retrieved data.",
+      data: items
+    })
+
+  } catch (error) {
+    res.send({
+      error: true,
+      message: error.message,
+      data: null
+    })
+  }
+})
 
 /* GET a component. */
 router.get("/:id", async (req, res) => {
@@ -79,7 +118,7 @@ router.get("/:id", async (req, res) => {
 router.post("/create", mandatoryAuth, async (req, res) => {
   try {
     if (req.auth?.role === "USER") {
-      throw new Error("You can't create a post with your current role.")
+      throw new Error("You can't create an item with your current role.")
     }
 
     const { title, description, price }: CreateItemRequestBody = req.body
@@ -139,7 +178,7 @@ router.delete("/delete", mandatoryAuth, async (req, res) => {
     }
 
     if (item?.user_id !== req.auth?.id && req.auth?.role !== "SUPER") {
-      throw new Error("Product doesn't belong to you and you don't have the right role to delete it.")
+      throw new Error("Item doesn't belong to you and you don't have the right role to delete it.")
     }
 
     await prisma.item.delete({
