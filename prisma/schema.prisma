@@ -60,13 +60,19 @@ model Category {
 }
 
 model Invoice {
-  id             Int        @id @default(autoincrement())
+  id             Int           @id @default(autoincrement())
   payment_id     String
   quantity       Int
   total          Int
-  order          OrderGroup @relation(fields: [order_group_id], references: [id])
-  order_group_id Int
+  order          Order         @relation(fields: [order_id], references: [id])
+  order_id       Int
+  payment_method PaymentMethod
+  payment_status PaymentStatus
+  OrderGroup     OrderGroup?   @relation(fields: [orderGroupId], references: [id])
+  orderGroupId   Int?
 }
+
+// add revenue and debt tracking
 
 model Order {
   id             Int         @id @default(autoincrement())
@@ -76,6 +82,8 @@ model Order {
   product_id     Int
   quantity       Int
   status         OrderStatus @default(PENDING)
+
+  Invoice Invoice[]
 }
 
 // prefer using this pattern in contrast to prisma many to many.
@@ -156,6 +164,7 @@ model Product {
   ItemGroup   ItemGroup[]
   user        User        @relation(fields: [user_id], references: [id])
   user_id     String
+  created_at  DateTime    @default(now())
 }
 
 model Rating {
@@ -182,6 +191,11 @@ enum OrderStatus {
   FUFILLED
 }
 
+enum PaymentStatus {
+  PAID
+  NOT_PAID
+}
+
 enum AccountStatus {
   PENDING
   DELETED
@@ -194,4 +208,9 @@ enum Role {
   SUPER
   ADMIN
   VENDOR
+}
+
+enum PaymentMethod {
+  ON_DELIVERY
+  ON_LINE
 }
