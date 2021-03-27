@@ -1,7 +1,7 @@
-import express from 'express'
-import { mandatoryAuth } from '../middlewares/auth';
-import { CreateItemRequestBody, UpdateItemRequestBody } from '../types';
-import prisma from '../utilities/db';
+import express from "express";
+import { mandatoryAuth } from "../middlewares/auth";
+import { CreateItemRequestBody, UpdateItemRequestBody } from "../types";
+import prisma from "../utilities/db";
 var router = express.Router();
 
 /* Get Items in user possession */
@@ -9,108 +9,115 @@ router.get("/vendor", mandatoryAuth, async (req, res) => {
   try {
     const items = await prisma.item.findMany({
       where: {
-        user_id: req.auth?.id
+        user_id: req.auth?.id,
+      },
+      include: {
+        ItemGroup: true,
       }
-    })
+    });
 
     res.send({
       error: false,
-      message: "Successfully retrieved data.",
-      data: items
-    })
-
+      message: "Successfully retrieved item.",
+      data: items,
+    });
   } catch (error) {
     res.send({
       error: true,
       message: error.message,
-      data: null
-    })
+      data: null,
+    });
   }
-})
+});
 
 /* All items */
-router.get("/all", async (req, res) => {
+router.get("/all", async (_, res) => {
   try {
     const items = await prisma.item.findMany({
-      where: {}
-    })
+      where: {},
+      include: {
+        ItemGroup: true,
+      },
+    });
 
     res.send({
       error: false,
-      message: "Successfully retrieved data.",
-      data: items
-    })
-
+      message: "Successfully all items.",
+      data: items,
+    });
   } catch (error) {
     res.send({
       error: true,
       message: error.message,
-      data: null
-    })
+      data: null,
+    });
   }
-})
+});
 
 /* Search items */
 router.get("/search", async (req, res) => {
   try {
-    const name = req.query.search as string;
+    const search = req.query.search as string;
 
     const items = await prisma.item.findMany({
       where: {
         OR: [
           {
             description: {
-              contains: name
+              contains: search,
             },
             title: {
-              contains: name
-            }
-          }
-        ]
-      }
-    })
+              contains: search,
+            },
+          },
+        ],
+      },
+    });
 
     res.send({
       error: false,
       message: "Successfully retrieved data.",
-      data: items
-    })
-
+      data: items,
+    });
   } catch (error) {
     res.send({
       error: true,
       message: error.message,
-      data: null
-    })
+      data: null,
+    });
   }
-})
+});
 
 /* GET a component. */
 router.get("/:id", async (req, res) => {
   try {
-    const item_id = Number(req.params.id)
+    const item_id = Number(req.params.id);
 
     if (!item_id) {
-      throw new Error("Invalid item_id.")
+      throw new Error("Invalid item_id.");
     }
 
     const item = await prisma.item.findUnique({
       where: {
-        id: item_id
-      }
-    })
+        id: item_id,
+      },
+      include: {
+        ItemGroup: true,
+        user: true,
+      },
+    });
 
     res.send({
       error: false,
-      message: "Successfully fetch item.",
+      message: "Successfully fetched item.",
       data: item,
-    })
+    });
   } catch (error) {
     res.send({
       error: true,
       message: error.message,
-      data: null
-    })
+      data: null,
+    });
   }
 });
 
@@ -118,17 +125,17 @@ router.get("/:id", async (req, res) => {
 router.post("/create", mandatoryAuth, async (req, res) => {
   try {
     if (req.auth?.role === "USER") {
-      throw new Error("You can't create an item with your current role.")
+      throw new Error("You can't create an item with your current role.");
     }
 
-    const { title, description, price }: CreateItemRequestBody = req.body
+    const { title, description, price }: CreateItemRequestBody = req.body;
 
     if (typeof price !== "number" || !price) {
-      throw new Error("Invalid item price.")
+      throw new Error("Invalid item price.");
     } else if (typeof description !== "string" || !description) {
-      throw new Error("Invalid item description.")
+      throw new Error("Invalid item description.");
     } else if (typeof title !== "string" || !description) {
-      throw new Error("Invalid item price.")
+      throw new Error("Invalid item price.");
     }
 
     const item = await prisma.item.create({
@@ -136,121 +143,129 @@ router.post("/create", mandatoryAuth, async (req, res) => {
         title,
         description,
         price,
-        user_id: req.auth?.id as string
-      }
-    })
+        user_id: req.auth?.id as string,
+      },
+    });
 
     res.send({
       error: false,
       message: "Successfully created item.",
-      data: item
-    })
+      data: item,
+    });
   } catch (error) {
     res.send({
       error: true,
       message: error.message,
-      data: null
-    })
+      data: null,
+    });
   }
-})
-
+});
 
 /** Deletes a component */
 router.delete("/delete", mandatoryAuth, async (req, res) => {
   try {
-    const item_id = Number(req.query.item_id)
+    const item_id = Number(req.query.item_id);
 
     if (!item_id) {
-      throw new Error("Invalid item_id.")
+      throw new Error("Invalid item_id.");
     }
 
     const item = await prisma.item.findUnique({
       where: {
-        id: item_id
+        id: item_id,
       },
       include: {
-        ItemGroup: true
-      }
-    })
+        ItemGroup: true,
+      },
+    });
 
     if (item?.ItemGroup && item?.ItemGroup.length > 0) {
-      throw new Error("Can't delete items that have active linking to a product.")
+      throw new Error(
+        "Can't delete items that have active linking to a product."
+      );
     }
 
     if (item?.user_id !== req.auth?.id && req.auth?.role !== "SUPER") {
-      throw new Error("Item doesn't belong to you and you don't have the right role to delete it.")
+      throw new Error(
+        "Item doesn't belong to you and you don't have the right role to delete it."
+      );
     }
 
     await prisma.item.delete({
       where: {
-        id: item_id
-      }
-    })
+        id: item_id,
+      },
+    });
 
     res.send({
       error: false,
       message: "Successfully deleted item.",
-      data: null
-    })
+      data: null,
+    });
   } catch (error) {
     res.send({
       error: true,
       message: error.message,
-      data: null
-    })
+      data: null,
+    });
   }
-})
+});
 
 /* Updates a component */
 router.put("/update", mandatoryAuth, async (req, res) => {
   try {
-    const { price, title, description, item_id }: UpdateItemRequestBody = req.body
+    const {
+      price,
+      title,
+      description,
+      item_id,
+    }: UpdateItemRequestBody = req.body;
 
     if (!item_id) {
-      throw new Error("Invalid item_id.")
+      throw new Error("Invalid item_id.");
     } else if (!title) {
-      throw new Error("Invalid title.")
+      throw new Error("Invalid title.");
     } else if (!description) {
-      throw new Error("Invalid description.")
+      throw new Error("Invalid description.");
     } else if (!price) {
-      throw new Error("Invalid price.")
+      throw new Error("Invalid price.");
     }
 
     const item = await prisma.item.findUnique({
       where: {
-        id: item_id
-      }
-    })
+        id: item_id,
+      },
+    });
 
     if (item?.user_id !== req.auth?.id && req.auth?.role !== "SUPER") {
-      throw new Error("Product doesn't belong to you and you don't have the right role to update it.")
+      throw new Error(
+        "Product doesn't belong to you and you don't have the right role to update it."
+      );
     }
 
     const newItem = await prisma.item.update({
       where: {
-        id: item_id
+        id: item_id,
       },
       data: {
         description,
         price,
-        title
-      }
-    })
+        title,
+      },
+    });
 
     res.send({
       error: false,
       message: "Successfully update item.",
-      data: newItem
-    })
+      data: newItem,
+    });
   } catch (error) {
     res.send({
       error: true,
       message: error.message,
-      data: null
-    })
+      data: null,
+    });
   }
-})
-
-
+});
 
 export default router;
