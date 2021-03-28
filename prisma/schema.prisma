@@ -29,6 +29,7 @@ model User {
   wishlists    Wishlist[]
   Product      Product[]
   Item         Item[]
+  Cart         Cart[]
 }
 
 model UserValidation {
@@ -61,19 +62,15 @@ model Category {
 
 model Invoice {
   id             Int           @id @default(autoincrement())
-  payment_id     String
-  quantity       Int
-  total          Int
+  payment_id     String        @default(uuid())
+  amount         Float
   order          Order         @relation(fields: [order_id], references: [id])
   order_id       Int
   payment_method PaymentMethod
   payment_status PaymentStatus
-  OrderGroup     OrderGroup?   @relation(fields: [orderGroupId], references: [id])
-  orderGroupId   Int?
 }
 
 // add revenue and debt tracking
-
 model Order {
   id             Int         @id @default(autoincrement())
   order_group    OrderGroup  @relation(fields: [order_group_id], references: [id])
@@ -82,21 +79,20 @@ model Order {
   product_id     Int
   quantity       Int
   status         OrderStatus @default(PENDING)
-  Invoice Invoice[]
+  Invoice        Invoice[]
 }
 
 // prefer using this pattern in contrast to prisma many to many.
 // Leave it like this. It helps me map to SQL in my brain
 model OrderGroup {
-  id           Int       @id @default(autoincrement())
-  date         DateTime  @default(now())
+  id           Int      @id @default(autoincrement())
+  date         DateTime @default(now())
   orders       Order[]
-  invoice      Invoice[]
   address      String
   first_name   String
   last_name    String
   phone_number String
-  user         User      @relation(fields: [user_id], references: [id])
+  user         User     @relation(fields: [user_id], references: [id])
   user_id      String
 }
 
@@ -123,6 +119,8 @@ model Cart {
   product    Product @relation(fields: [product_id], references: [id])
   product_id Int
   quantity   Int
+  user       User    @relation(fields: [user_id], references: [id])
+  user_id    String
 }
 
 model Item {
@@ -150,16 +148,15 @@ model Product {
   title       String
   excerpt     String
   description String
-  price       Decimal
+  price       Float
   discount    Int         @default(0)
   wishlist    Wishlist[]
   cart        Cart[]
   order       Order[]
-  category    Category    @relation(fields: [category_id], references: [id])
-  category_id Int
+  category    Category[]
   comments    Comment[]
   rating      Rating[]
-  stock       Int[]
+  stock       Int
   ItemGroup   ItemGroup[]
   user        User        @relation(fields: [user_id], references: [id])
   user_id     String
@@ -195,7 +192,6 @@ model ImagesGroup {
 enum OrderStatus {
   CANCELLED
   PENDING
-  RETURNED
   FUFILLED
 }
 
@@ -219,6 +215,6 @@ enum Role {
 }
 
 enum PaymentMethod {
-  ON_DELIVERY
-  ON_LINE
+  CARD
+  CASH
 }
