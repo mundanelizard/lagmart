@@ -1,4 +1,4 @@
-import { Cart, User,  } from ".prisma/client";
+import { Cart, User } from ".prisma/client";
 import express from "express";
 import { mandatoryAuth } from "../middlewares/auth";
 import { CartWithProduct } from "../types";
@@ -187,7 +187,9 @@ router.post("/verify", mandatoryAuth, async (req, res) => {
       },
     });
 
-    const cartItems = JSON.parse(payment?.cart_items as string) as Array<CartWithProduct>;
+    const cartItems = JSON.parse(
+      payment?.cart_items as string
+    ) as Array<CartWithProduct>;
 
     await prisma.cardPayment.delete({
       where: {
@@ -195,12 +197,7 @@ router.post("/verify", mandatoryAuth, async (req, res) => {
       },
     });
 
-    const {
-      first_name,
-      last_name,
-      phone_number,
-      address,
-    } = req.body;
+    const { first_name, last_name, phone_number, address } = req.body;
 
     // create an order groun
     const orderGroup = await prisma.orderGroup.create({
@@ -273,6 +270,61 @@ router.post("/verify", mandatoryAuth, async (req, res) => {
   }
 });
 /* Update orders mad */
-router.put("/order", mandatoryAuth, async (req, res) => {});
+router.put("/order", mandatoryAuth, async (req, res) => {
+  try {
+    const { order_id, status } = req.body;
+
+    const order = await prisma.order.findUnique({
+      where: {
+        id: order_id,
+      },
+      include: {
+        product: true,
+        Invoice: true
+      },
+    });
+
+    if (order?.product.user_id !== req.auth?.id && req.auth?.role !== "SUPER") {
+      throw Error(
+        "You don't have the right role or permission to update order status."
+      );
+    }
+
+    if (status === "FUFILLED") {
+      await prisma.order.update({
+        where: {
+          id: order_id
+        },
+        data: {
+          status,
+          Invoice: {
+            update: {
+              payment_status: "PAID"
+            }
+          }
+        }
+      })
+    } else if (status === "CANCELLED") {
+      await prisma.order.update({
+        where: {
+          id: order_id,
+        },
+        data: {
+          status,
+        },
+      });
+    }
+
+    // if user doesn't check if he is super
+    // update order if previous contraints were passed
+    // else return with an error.
+  } catch (error) {
+    res.send({
+      error: true,
+      message: error.message,
+      data: null,
+    });
+  }
+});
 
 export default router;

@@ -80,7 +80,7 @@ model Order {
   product_id     Int
   quantity       Int
   status         OrderStatus @default(PENDING)
-  Invoice        Invoice[]
+  Invoice        Invoice?
 }
 
 // prefer using this pattern in contrast to prisma many to many.
