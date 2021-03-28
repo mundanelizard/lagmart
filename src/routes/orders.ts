@@ -45,8 +45,42 @@ router.post("/order", mandatoryAuth, async (req, res) => {
 
     if (payment_method === "CARD") {
       // get card info
+      const { card_number, card_name, cvv, expiration_date } = req.body;
+
+      if (typeof card_number !== "string" || !card_number) {
+        throw new Error("Invalid card number.");
+      } else if (typeof card_name !== "string" || !card_name) {
+        throw new Error("Invalid card name");
+      } else if (typeof cvv !== "string") {
+        throw new Error("Invalid cvv.");
+      } else if (
+        typeof expiration_date !== "string" ||
+        expiration_date.split("/").length !== 2
+      ) {
+        throw new Error("Invalid expiration date.");
+      }
+
       // calculate the total
-      // create a new cardpayment and link it to the products in cart.
+      const total = cartItems.reduce(
+        (prev, item) => prev + item.quantity * item.product.price,
+        0
+      );
+
+      // process payment
+
+      // authorization: {
+      //   mode: "pin",
+      //   pin
+      // }
+
+      // create a temp relation to keep track of payment
+      await prisma.cardPayment.create({
+        data: {
+          user_id: req.auth?.id as string,
+          cart_items: JSON.stringify(cartItems),
+          total: total,
+        },
+      });
     } else if (payment_method === "CASH") {
       // create an orders for cart items and link their invoice.
       const orderPromises = cartItems.map((item) =>
@@ -59,7 +93,7 @@ router.post("/order", mandatoryAuth, async (req, res) => {
             Invoice: {
               create: {
                 amount: item.quantity * item.product.price,
-                payment_method: "CARD",
+                payment_method: "CASH",
                 payment_status: "NOT_PAID",
               },
             },
@@ -109,6 +143,11 @@ router.post("/order", mandatoryAuth, async (req, res) => {
   }
 });
 
+
+router.post("/verify", mandatoryAuth, async (req, res) => {
+  const { otp, card_payment_id } = req.body;
+
+})
 /* Update orders mad */
 router.put("/order", mandatoryAuth, async (req, res) => {});
 

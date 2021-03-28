@@ -13,3 +13,10 @@ export const FAILED_SIGNUP_REDIRECT = process.env.FAILED_SIGNUP_REDIRECT
 export const SUCCESS_SIGNUP_REDIRECT = process.env.SUCCESS_SIGNUP_REDIRECT
 export const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET
 export const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET
+export const PAYMENT_SECRET_KEY = process.env.PAYMENT_SECRET_KEY
+export const PAYMENT_ENCRYPTION_KEY = process.env.PAYMENT_ENCRYPTION_KEY
+
+export const FLUTTERWAVE_VALIDATE_URL =
+  "https://api.flutterwave.com/v3/validate-charge";
+export const FLUTTERWAVE_INSTANTIATE_URL =
+  "https://api.flutterwave.com/v3/charges?type=card";

@@ -30,6 +30,7 @@ model User {
   Product      Product[]
   Item         Item[]
   Cart         Cart[]
+  CardPayment  CardPayment[]
 }
 
 model UserValidation {
@@ -178,6 +179,14 @@ model Comment {
   user_id    String
   product    Product @relation(fields: [product_id], references: [id])
   product_id Int
+}
+
+model CardPayment {
+  id         Int    @id @default(autoincrement())
+  user       User   @relation(fields: [user_id], references: [id])
+  user_id    String
+  total      Float
+  cart_items Json
 }
 
 model Images {
