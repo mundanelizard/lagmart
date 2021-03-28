@@ -62,7 +62,7 @@ router.get("/all", async (_, res) => {
   }
 });
 
-/* Search items in stock */
+/* Search product in stock */
 router.get("/search", async (req, res) => {
   try {
     const search = req.query.search as string;
@@ -105,7 +105,7 @@ router.get("/search", async (req, res) => {
   }
 });
 
-/* Get Product that is in out of stock. */
+/* Get product that is in out of stock. */
 router.get("/:id", async (req, res) => {
   try {
     const product_id = Number(req.params.id);
@@ -144,7 +144,7 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-/* Create Product. */
+/* Create product. */
 router.post("/create", mandatoryAuth, async (req, res) => {
   try {
     if (req.auth?.role === "USER") {
@@ -216,7 +216,7 @@ router.post("/create", mandatoryAuth, async (req, res) => {
   }
 });
 
-/* Update Product. */
+/* Update product. */
 router.put("/update", mandatoryAuth, async (req, res) => {
   try {
     if (req.auth?.role === "USER") {
@@ -291,7 +291,7 @@ router.put("/update", mandatoryAuth, async (req, res) => {
   }
 });
 
-/* Delete Product. */
+/* Delete product. */
 router.delete("/delete", mandatoryAuth, async (req, res) => {
   try {
     const product_id = Number(req.query.item_id);
@@ -328,5 +328,15 @@ router.delete("/delete", mandatoryAuth, async (req, res) => {
     });
   }
 });
+
+/* Rate product. */
+router.put("/rating", mandatoryAuth, async (req, res) => {
+
+})
+
+/* Comment on product. */
+router.put("/comment", mandatoryAuth, async (req, res) => {
+
+})
 
 export default router;

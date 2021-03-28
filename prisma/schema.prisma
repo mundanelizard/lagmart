@@ -82,7 +82,6 @@ model Order {
   product_id     Int
   quantity       Int
   status         OrderStatus @default(PENDING)
-
   Invoice Invoice[]
 }
 
@@ -105,7 +104,7 @@ model Discount {
   id            Int      @id @default(autoincrement())
   discount_code String
   discount_name String
-  percent       Int
+  percent       Decimal
   created       DateTime @default(now())
   ends          DateTime
   redeemer      Redeem[]
@@ -130,7 +129,7 @@ model Item {
   id          Int         @id @default(autoincrement())
   title       String
   description String
-  price       Int
+  price       Decimal
   user        User        @relation(fields: [user_id], references: [id])
   user_id     String
   ItemGroup   ItemGroup[]
@@ -151,7 +150,7 @@ model Product {
   title       String
   excerpt     String
   description String
-  price       Int
+  price       Decimal
   discount    Int         @default(0)
   wishlist    Wishlist[]
   cart        Cart[]
@@ -182,6 +181,15 @@ model Comment {
   user_id    String
   product    Product @relation(fields: [product_id], references: [id])
   product_id Int
+}
+
+model Images {
+  id Int @id @default(autoincrement())
+}
+
+model ImagesGroup {
+  id Int @id @default(autoincrement())
+  // first_name
 }
 
 enum OrderStatus {
