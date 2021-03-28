@@ -1,3 +1,5 @@
+import { Cart, Product } from ".prisma/client";
+
 export interface SignupRequestBody {
   first_name: string;
   last_name: string;
@@ -35,4 +37,8 @@ export interface CreateDiscountBody {
 
 export interface UpdateDiscountBody extends CreateDiscountBody {
   discount_id: number;
+}
+
+export interface CartWithProduct extends Cart {
+  product: Product
 }
