@@ -9,7 +9,6 @@ import {
 } from "../utilities/payments";
 const router = express.Router();
 
-
 /* Get all orders made by user */
 router.get("/all", mandatoryAuth, async (req, res) => {
   try {
@@ -19,11 +18,11 @@ router.get("/all", mandatoryAuth, async (req, res) => {
           include: {
             product: true,
             order_group: true,
-            invoice: true
-          }
-        }
-      }
-    })
+            invoice: true,
+          },
+        },
+      },
+    });
 
     res.send({
       error: false,
@@ -51,7 +50,7 @@ router.get("/vendor", mandatoryAuth, async (req, res) => {
           include: {
             order_group: true,
             invoice: true,
-            product: true
+            product: true,
           },
         },
       },
@@ -107,6 +106,7 @@ router.post("/order", mandatoryAuth, async (req, res) => {
       last_name,
       phone_number,
       address,
+      discount_code,
     } = req.body;
 
     // get all items in cart
@@ -116,6 +116,42 @@ router.post("/order", mandatoryAuth, async (req, res) => {
         product: true,
       },
     });
+
+    const discountDetails = await prisma.discount.findFirst({
+      where: {
+        discount_code,
+      },
+    });
+
+    if (
+      discountDetails &&
+      Date.now() < new Date(discountDetails.ends).getTime()
+    ) {
+      // check if user has redeemed
+      const redeemed = await prisma.redeem.findFirst({
+        where: {
+          user_id: req.auth?.id,
+        },
+        include: {
+          discount: true,
+        },
+      });
+
+      if (redeemed) {
+        var discount = 1;
+      } else {
+        var discount = (discountDetails.percent as number) / 100;
+
+        await prisma.redeem.create({
+          data: {
+            discount_id: discountDetails.id,
+            user_id: req.auth?.id as string,
+          },
+        });
+      }
+    } else {
+      var discount = 1;
+    }
 
     if (payment_method === "CARD") {
       // get card info
@@ -147,7 +183,7 @@ router.post("/order", mandatoryAuth, async (req, res) => {
         data: {
           user_id: req.auth?.id as string,
           cart_items: JSON.stringify(cartItems),
-          total: total,
+          total: total * discount,
         },
       });
 
@@ -204,7 +240,7 @@ router.post("/order", mandatoryAuth, async (req, res) => {
             status: "PENDING",
             invoice: {
               create: {
-                amount: item.quantity * item.product.price,
+                amount: item.quantity * item.product.price * discount,
                 payment_method: "CASH",
                 payment_status: "NOT_PAID",
               },
@@ -257,7 +293,7 @@ router.post("/order", mandatoryAuth, async (req, res) => {
 
 router.post("/verify", mandatoryAuth, async (req, res) => {
   try {
-    const { otp, flw_ref } = req.body;
+    const { otp, flw_ref, discount_code } = req.body;
 
     const [txRef] = await validateCardPayment(otp, flw_ref);
 
@@ -266,6 +302,18 @@ router.post("/verify", mandatoryAuth, async (req, res) => {
         id: txRef,
       },
     });
+
+    const discountDetails = await prisma.discount.findFirst({
+      where: {
+        discount_code,
+      },
+    });
+
+    if (discountDetails) {
+      var discount = discountDetails.percent / 100
+    } else {
+      var discount = 1;
+    }
 
     const cartItems = JSON.parse(
       payment?.cart_items as string
@@ -300,7 +348,7 @@ router.post("/verify", mandatoryAuth, async (req, res) => {
           status: "PENDING",
           invoice: {
             create: {
-              amount: item.quantity * item.product.price,
+              amount: (item.quantity * item.product.price) * discount,
               payment_method: "CARD",
               payment_status: "PAID",
             },

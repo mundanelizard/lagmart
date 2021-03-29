@@ -27,10 +27,10 @@ model User {
   redeemed     Redeem[]
   comments     Comment[]
   wishlists    Wishlist[]
-  products      Product[]
-  items         Item[]
+  products     Product[]
+  items        Item[]
   cart         Cart[]
-  card_payment  CardPayment[]
+  card_payment CardPayment[]
 }
 
 model UserValidation {
@@ -99,9 +99,9 @@ model OrderGroup {
 
 model Discount {
   id            Int      @id @default(autoincrement())
-  discount_code String
+  discount_code String   @unique
   discount_name String
-  percent       Decimal
+  percent       Float
   created       DateTime @default(now())
   ends          DateTime
   redeemer      Redeem[]
@@ -128,10 +128,10 @@ model Item {
   id          Int         @id @default(autoincrement())
   title       String
   description String
-  price       Decimal
+  price       Float
   user        User        @relation(fields: [user_id], references: [id])
   user_id     String
-  item_group   ItemGroup[]
+  item_group  ItemGroup[]
 }
 
 // prefer using this pattern in contrast to prisma many to many.
@@ -158,7 +158,7 @@ model Product {
   comments    Comment[]
   rating      Rating[]
   stock       Int
-  item_group   ItemGroup[]
+  item_group  ItemGroup[]
   user        User        @relation(fields: [user_id], references: [id])
   user_id     String
   created_at  DateTime    @default(now())
