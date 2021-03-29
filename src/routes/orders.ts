@@ -10,13 +10,92 @@ import {
 const router = express.Router();
 
 /* Get all orders made by user */
-router.get("/all", mandatoryAuth, async (req, res) => {});
+router.get("/all", mandatoryAuth, async (req, res) => {
+  try {
+    const orders = await prisma.orderGroup.findMany({
+      include: {
+        orders: {
+          include: {
+            product: true,
+            order_group: true,
+            invoice: true
+          }
+        }
+      }
+    })
+
+    res.send({
+      error: false,
+      message: "Successfully fetched orders.",
+      data: orders,
+    });
+  } catch (error) {
+    res.send({
+      error: true,
+      message: error.message,
+      data: null,
+    });
+  }
+});
 
 /* Get all orders made to a vendor */
-router.get("/vendor", mandatoryAuth, async (req, res) => {});
+router.get("/vendor", mandatoryAuth, async (req, res) => {
+  try {
+    const orders = await prisma.product.findMany({
+      where: {
+        user_id: req.auth?.id as string,
+      },
+      include: {
+        order: {
+          include: {
+            order_group: true,
+            invoice: true,
+            product: true
+          },
+        },
+      },
+    });
+
+    res.send({
+      error: false,
+      message: "Successfully fetched orders.",
+      data: orders,
+    });
+  } catch (error) {
+    res.send({
+      error: true,
+      message: error.message,
+      data: null,
+    });
+  }
+});
 
 /* Get all orders made on the platform -- admin only */
-router.get("/orders", mandatoryAuth, async (req, res) => {});
+router.get("/orders", mandatoryAuth, async (req, res) => {
+  try {
+    if (req.auth?.role !== "SUPER" && req.auth?.role !== "ADMIN") {
+      throw new Error("You have invalid access level.");
+    }
+
+    const orders = await prisma.orderGroup.findMany({
+      include: {
+        orders: true,
+      },
+    });
+
+    res.send({
+      error: false,
+      message: "Successfully fetched orders.",
+      data: orders,
+    });
+  } catch (error) {
+    res.send({
+      error: true,
+      message: error.message,
+      data: null,
+    });
+  }
+});
 
 /* Create all orders */
 router.post("/order", mandatoryAuth, async (req, res) => {
@@ -122,7 +201,7 @@ router.post("/order", mandatoryAuth, async (req, res) => {
             product_id: item.product.id,
             quantity: item.quantity,
             status: "PENDING",
-            Invoice: {
+            invoice: {
               create: {
                 amount: item.quantity * item.product.price,
                 payment_method: "CASH",
@@ -218,11 +297,11 @@ router.post("/verify", mandatoryAuth, async (req, res) => {
           product_id: item.product.id,
           quantity: item.quantity,
           status: "PENDING",
-          Invoice: {
+          invoice: {
             create: {
               amount: item.quantity * item.product.price,
-              payment_method: "CASH",
-              payment_status: "NOT_PAID",
+              payment_method: "CARD",
+              payment_status: "PAID",
             },
           },
         },
@@ -269,6 +348,7 @@ router.post("/verify", mandatoryAuth, async (req, res) => {
     });
   }
 });
+
 /* Update orders mad */
 router.put("/order", mandatoryAuth, async (req, res) => {
   try {
@@ -280,7 +360,7 @@ router.put("/order", mandatoryAuth, async (req, res) => {
       },
       include: {
         product: true,
-        Invoice: true
+        invoice: true,
       },
     });
 
@@ -293,17 +373,17 @@ router.put("/order", mandatoryAuth, async (req, res) => {
     if (status === "FUFILLED") {
       await prisma.order.update({
         where: {
-          id: order_id
+          id: order_id,
         },
         data: {
           status,
-          Invoice: {
+          invoice: {
             update: {
-              payment_status: "PAID"
-            }
-          }
-        }
-      })
+              payment_status: "PAID",
+            },
+          },
+        },
+      });
     } else if (status === "CANCELLED") {
       await prisma.order.update({
         where: {

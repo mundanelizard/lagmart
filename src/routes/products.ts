@@ -11,7 +11,7 @@ router.get("/vendor", mandatoryAuth, async (req, res) => {
         user_id: req.auth?.id,
       },
       include: {
-        ItemGroup: true,
+        item_group: true,
         cart: true,
         category: true,
         comments: true,
@@ -41,7 +41,7 @@ router.get("/all", async (_, res) => {
     const product = await prisma.product.findMany({
       where: {},
       include: {
-        ItemGroup: true,
+        item_group: true,
         user: true,
         rating: true,
         order: true,
@@ -84,7 +84,7 @@ router.get("/search", async (req, res) => {
         ],
       },
       include: {
-        ItemGroup: true,
+        item_group: true,
         user: true,
         rating: true,
         order: true,
@@ -119,7 +119,7 @@ router.get("/:id", async (req, res) => {
         id: product_id,
       },
       include: {
-        ItemGroup: true,
+        item_group: true,
         category: true,
         cart: true,
         comments: true,
@@ -305,7 +305,7 @@ router.delete("/delete", mandatoryAuth, async (req, res) => {
         id: product_id,
       },
       include: {
-        ItemGroup: true,
+        item_group: true,
       },
     });
 

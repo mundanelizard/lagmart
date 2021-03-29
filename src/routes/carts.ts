@@ -14,7 +14,7 @@ router.post("/add", mandatoryAuth, async (req, res) => {
 
     const cart = await prisma.cart.create({
       data: {
-        user_id: req.auth?.id,
+        user_id: req.auth?.id as string,
         product_id,
         quantity,
       },

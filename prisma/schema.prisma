@@ -27,10 +27,10 @@ model User {
   redeemed     Redeem[]
   comments     Comment[]
   wishlists    Wishlist[]
-  Product      Product[]
-  Item         Item[]
-  Cart         Cart[]
-  CardPayment  CardPayment[]
+  products      Product[]
+  items         Item[]
+  cart         Cart[]
+  card_payment  CardPayment[]
 }
 
 model UserValidation {
@@ -80,7 +80,7 @@ model Order {
   product_id     Int
   quantity       Int
   status         OrderStatus @default(PENDING)
-  Invoice        Invoice?
+  invoice        Invoice?
 }
 
 // prefer using this pattern in contrast to prisma many to many.
@@ -131,7 +131,7 @@ model Item {
   price       Decimal
   user        User        @relation(fields: [user_id], references: [id])
   user_id     String
-  ItemGroup   ItemGroup[]
+  item_group   ItemGroup[]
 }
 
 // prefer using this pattern in contrast to prisma many to many.
@@ -158,7 +158,7 @@ model Product {
   comments    Comment[]
   rating      Rating[]
   stock       Int
-  ItemGroup   ItemGroup[]
+  item_group   ItemGroup[]
   user        User        @relation(fields: [user_id], references: [id])
   user_id     String
   created_at  DateTime    @default(now())

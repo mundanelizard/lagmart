@@ -12,7 +12,7 @@ router.get("/vendor", mandatoryAuth, async (req, res) => {
         user_id: req.auth?.id,
       },
       include: {
-        ItemGroup: true,
+        item_group: true,
       }
     });
 
@@ -36,7 +36,7 @@ router.get("/all", async (_, res) => {
     const items = await prisma.item.findMany({
       where: {},
       include: {
-        ItemGroup: true,
+        item_group: true,
       },
     });
 
@@ -102,7 +102,7 @@ router.get("/:id", async (req, res) => {
         id: item_id,
       },
       include: {
-        ItemGroup: true,
+        item_group: true,
         user: true,
       },
     });
@@ -175,11 +175,11 @@ router.delete("/delete", mandatoryAuth, async (req, res) => {
         id: item_id,
       },
       include: {
-        ItemGroup: true,
+        item_group: true,
       },
     });
 
-    if (item?.ItemGroup && item?.ItemGroup.length > 0) {
+    if (item?.item_group && item?.item_group.length > 0) {
       throw new Error(
         "Can't delete items that have active linking to a product."
       );

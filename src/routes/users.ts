@@ -28,6 +28,15 @@ router.get("/:id", mandatoryAuth, async (req, res) => {
         last_name: true,
         status: true,
         role: true,
+        card_payment: true,
+        cart: true,
+        comments: true,
+        items: true,
+        order_groups: true,
+        products: true,
+        ratings: true,
+        redeemed: true,
+        wishlists: true,
       }
     })
 
