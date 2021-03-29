@@ -62,13 +62,14 @@ model Category {
 }
 
 model Invoice {
-  id             Int           @id @default(autoincrement())
-  payment_id     String        @default(uuid())
-  amount         Float
-  order          Order         @relation(fields: [order_id], references: [id])
-  order_id       Int
-  payment_method PaymentMethod
-  payment_status PaymentStatus
+  id                    Int           @id @default(autoincrement())
+  payment_id            String        @default(uuid())
+  amount                Float
+  order                 Order         @relation(fields: [order_id], references: [id])
+  order_id              Int
+  payment_method        PaymentMethod
+  payment_status        PaymentStatus
+  vendor_payment_status PaymentStatus @default(dbgenerated("NOT_PAID"))
 }
 
 // add revenue and debt tracking
