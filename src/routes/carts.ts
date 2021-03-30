@@ -6,7 +6,7 @@ const router = express.Router();
 /* Get all orders made to a vendor */
 router.post("/add", mandatoryAuth, async (req, res) => {
   try {
-    const { product_id, quantity } = req.body;
+    const { product_id, quantity, type } = req.body;
 
     if (!product_id || !quantity) {
       throw new Error("Invalid product_id and quantity.");
@@ -17,6 +17,7 @@ router.post("/add", mandatoryAuth, async (req, res) => {
         user_id: req.auth?.id as string,
         product_id,
         quantity,
+        type
       },
     });
 

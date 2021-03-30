@@ -1,4 +1,5 @@
 import express from "express";
+import { userInfo } from "node:os";
 import { mandatoryAuth } from "../middlewares/auth";
 import prisma from "../utilities/db";
 var router = express.Router();
@@ -13,10 +14,14 @@ router.get("/vendor", mandatoryAuth, async (req, res) => {
       include: {
         item_group: true,
         cart: true,
-        category: true,
+        category_group: {
+          include: {
+            category: true,
+          },
+        },
         comments: true,
         order: true,
-        rating: true,
+        ratings: true,
         user: true,
       },
     });
@@ -24,8 +29,8 @@ router.get("/vendor", mandatoryAuth, async (req, res) => {
     res.send({
       error: false,
       message: "Successfully retrieved product",
-      data: products
-    })
+      data: products,
+    });
   } catch (error) {
     res.send({
       error: true,
@@ -43,8 +48,13 @@ router.get("/all", async (_, res) => {
       include: {
         item_group: true,
         user: true,
-        rating: true,
+        ratings: true,
         order: true,
+        category_group: {
+          include: {
+            category: true,
+          },
+        },
       },
     });
 
@@ -86,8 +96,13 @@ router.get("/search", async (req, res) => {
       include: {
         item_group: true,
         user: true,
-        rating: true,
+        ratings: true,
         order: true,
+        category_group: {
+          include: {
+            category: true,
+          },
+        },
       },
     });
 
@@ -120,11 +135,15 @@ router.get("/:id", async (req, res) => {
       },
       include: {
         item_group: true,
-        category: true,
+        category_group: {
+          include: {
+            category: true,
+          },
+        },
         cart: true,
         comments: true,
         order: true,
-        rating: true,
+        ratings: true,
         user: true,
         wishlist: true,
       },
@@ -157,7 +176,7 @@ router.post("/create", mandatoryAuth, async (req, res) => {
       excerpt,
       description,
       price,
-      category_id,
+      category_ids,
       stock,
     } = req.body;
 
@@ -171,7 +190,7 @@ router.post("/create", mandatoryAuth, async (req, res) => {
       throw new Error("You can't create a new product without a price.");
     } else if (typeof description !== "string" || !description) {
       throw new Error("You can't create new product with out a description");
-    } else if (typeof category_id !== "number" || !category_id) {
+    } else if (!Array.isArray(category_ids)) {
       throw new Error(
         "You can't create product that doesn't belong to a category."
       );
@@ -182,7 +201,6 @@ router.post("/create", mandatoryAuth, async (req, res) => {
     const product = await prisma.product.create({
       data: {
         user_id: req.auth?.id as string,
-        category_id,
         excerpt,
         price,
         description,
@@ -200,7 +218,18 @@ router.post("/create", mandatoryAuth, async (req, res) => {
       })
     );
 
-    await Promise.all(itemGroupPromises);
+    const categoryGroupPromises = category_ids.map((i) =>
+      prisma.categoryGroup.create({
+        data: {
+          category_id: i,
+          product_id: product.id,
+        },
+      })
+    );
+
+    await Promise.all([...itemGroupPromises, ...categoryGroupPromises] as Array<
+      Promise<any>
+    >);
 
     res.send({
       error: false,
@@ -228,7 +257,7 @@ router.put("/update", mandatoryAuth, async (req, res) => {
       excerpt,
       description,
       price,
-      category_id,
+      category_ids,
       stock,
       product_id,
     } = req.body;
@@ -241,7 +270,7 @@ router.put("/update", mandatoryAuth, async (req, res) => {
       throw new Error("You can't create a new product without a price.");
     } else if (typeof description !== "string" || !description) {
       throw new Error("You can't create new product with out a description");
-    } else if (typeof category_id !== "number" || !category_id) {
+    } else if (!Array.isArray(category_ids)) {
       throw new Error(
         "You can't create product that doesn't belong to a category."
       );
@@ -251,9 +280,12 @@ router.put("/update", mandatoryAuth, async (req, res) => {
       throw new Error("Expecting a valid product");
     }
 
-    const product = await prisma.product.findFirst({
+    const product = await prisma.product.findUnique({
       where: {
         id: product_id,
+      },
+      include: {
+        category_group: true,
       },
     });
 
@@ -268,7 +300,6 @@ router.put("/update", mandatoryAuth, async (req, res) => {
         id: product_id,
       },
       data: {
-        category_id,
         excerpt,
         price,
         description,
@@ -276,6 +307,29 @@ router.put("/update", mandatoryAuth, async (req, res) => {
         stock,
       },
     });
+
+    const shouldCategoriesUpdate =
+      category_ids.length !== product?.category_group.length ||
+      category_ids.some((i, index) => i !== product?.category_group[index]);
+
+    if (shouldCategoriesUpdate) {
+      await prisma.categoryGroup.deleteMany({
+        where: {
+          product_id: product?.id,
+        },
+      });
+
+      const categoryGroupPromises = category_ids.map((i) =>
+        prisma.categoryGroup.create({
+          data: {
+            category_id: i,
+            product_id: product?.id as number,
+          },
+        })
+      );
+
+      await Promise.all(categoryGroupPromises);
+    }
 
     res.send({
       error: false,
@@ -330,13 +384,198 @@ router.delete("/delete", mandatoryAuth, async (req, res) => {
 });
 
 /* Rate product. */
-router.put("/rating", mandatoryAuth, async (req, res) => {
+router.post("/rate", mandatoryAuth, async (req, res) => {
+  try {
+    const { rating, product_id, item_id } = req.body;
 
-})
+    if (typeof rating !== "number" || rating > 10 || rating < 0) {
+      throw new Error("Invalid rating.");
+    }
+
+    if (typeof product_id === "number" && product_id) {
+      const previousRating = await prisma.rating.findFirst({
+        where: {
+          user_id: req.auth?.id,
+          product_id,
+        },
+      });
+
+      if (previousRating) {
+        throw new Error("You can't rate a product more than once.");
+      }
+
+      await prisma.rating.create({
+        data: {
+          rating,
+          product_id,
+          user_id: req.auth?.id as string,
+        },
+      });
+    } else if (typeof item_id === "number" && item_id) {
+      const previousRating = await prisma.rating.findFirst({
+        where: {
+          user_id: req.auth?.id,
+          item_id,
+        },
+      });
+
+      if (previousRating) {
+        throw new Error("You can't rate a product more than once.");
+      }
+
+      await prisma.rating.create({
+        data: {
+          rating,
+          item_id,
+          user_id: req.auth?.id as string,
+        },
+      });
+    } else {
+      throw new Error("Invalid product_id or item_id.");
+    }
+  } catch (error) {
+    res.send({
+      error: true,
+      message: error.message,
+      data: null,
+    });
+  }
+});
+
+/* Rate product. */
+router.put("/rate", mandatoryAuth, async (req, res) => {
+  try {
+    const { rating, rating_id } = req.body;
+
+    if (typeof rating !== "number" || rating > 10 || rating < 0) {
+      throw new Error("Invalid rating.");
+    }
+
+    const prevRating = await prisma.rating.findFirst({
+      where: { user_id: req.auth?.id, id: rating_id },
+    });
+
+    if (!prevRating) {
+      throw new Error("Can not update rating that doesn't belong to you.");
+    }
+
+    await prisma.rating.update({
+      where: {
+        id: rating_id,
+      },
+      data: {
+        rating,
+      },
+    });
+  } catch (error) {
+    res.send({
+      error: true,
+      message: error.message,
+      data: null,
+    });
+  }
+});
 
 /* Comment on product. */
-router.put("/comment", mandatoryAuth, async (req, res) => {
+router.post("/comment", mandatoryAuth, async (req, res) => {});
 
-})
+/* Rate product. */
+router.post("/category", mandatoryAuth, async (req, res) => {
+  try {
+    const { category_name } = req.body;
+
+    if (typeof category_name !== "string" || !category_name) {
+      throw new Error("Invalid category_name.");
+    } else if (req.auth?.role !== "SUPER") {
+      throw new Error("Invalid permission level.");
+    }
+
+    const category = await prisma.category.create({
+      data: {
+        category_name: category_name,
+      },
+    });
+
+    res.send({
+      data: category,
+      error: false,
+      message: "Successfull created category.",
+    });
+  } catch (error) {
+    res.send({
+      error: true,
+      message: error.message,
+      data: null,
+    });
+  }
+});
+
+/* Comment on product. */
+router.put("/category", mandatoryAuth, async (req, res) => {
+  try {
+    const { category_name, category_id } = req.body;
+
+    if (typeof category_name !== "string" || !category_name) {
+      throw new Error("Invalid category_name.");
+    } else if (req.auth?.role !== "SUPER") {
+      throw new Error("Invalid permission level.");
+    }
+
+    const category = await prisma.category.update({
+      where: {
+        id: category_id,
+      },
+      data: {
+        category_name: category_name,
+      },
+    });
+
+    res.send({
+      data: category,
+      error: false,
+      message: "Successfull updated category.",
+    });
+  } catch (error) {
+    res.send({
+      error: true,
+      message: error.message,
+      data: null,
+    });
+  }
+});
+
+/* Comment on product. */
+router.delete("/category/:category_id", mandatoryAuth, async (req, res) => {
+  try {
+    const { category_id } = req.params;
+    if (req.auth?.role !== "SUPER") {
+      throw new Error("Invalid permission level.");
+    }
+
+    await prisma.category.delete({
+      where: {
+        id: Number(category_id),
+      },
+    });
+
+    await prisma.categoryGroup.deleteMany({
+      where: {
+        category_id: Number(category_id),
+      },
+    });
+
+    res.send({
+      data: null,
+      error: false,
+      message: "Successfull created category.",
+    });
+  } catch (error) {
+    res.send({
+      error: true,
+      message: error.message,
+      data: null,
+    });
+  }
+});
 
 export default router;

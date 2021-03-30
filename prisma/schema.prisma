@@ -56,9 +56,9 @@ model Wishlist {
 }
 
 model Category {
-  id            Int       @id @default(autoincrement())
-  category_name String
-  products      Product[]
+  id             Int             @id @default(autoincrement())
+  category_name  String          @unique
+  category_group CategoryGroup[]
 }
 
 model Invoice {
@@ -68,7 +68,7 @@ model Invoice {
   order                 Order         @relation(fields: [order_id], references: [id])
   order_id              Int
   payment_method        PaymentMethod
-  payment_status        PaymentStatus
+  payment_status        PaymentStatus // his belongs to the vendor
   vendor_payment_status PaymentStatus @default(dbgenerated("NOT_PAID"))
 }
 
@@ -77,8 +77,10 @@ model Order {
   id             Int         @id @default(autoincrement())
   order_group    OrderGroup  @relation(fields: [order_group_id], references: [id])
   order_group_id Int
-  product        Product     @relation(fields: [product_id], references: [id])
-  product_id     Int
+  product        Product?    @relation(fields: [product_id], references: [id])
+  product_id     Int?
+  item           Item?       @relation(fields: [item_id], references: [id])
+  item_id        Int?
   quantity       Int
   status         OrderStatus @default(PENDING)
   invoice        Invoice?
@@ -117,12 +119,15 @@ model Redeem {
 }
 
 model Cart {
-  id         Int     @id @default(autoincrement())
-  product    Product @relation(fields: [product_id], references: [id])
-  product_id Int
+  id         Int          @id @default(autoincrement())
+  product    Product?     @relation(fields: [product_id], references: [id])
+  product_id Int?
+  item       Item?        @relation(fields: [item_id], references: [id])
+  item_id    Int?
   quantity   Int
-  user       User    @relation(fields: [user_id], references: [id])
+  user       User         @relation(fields: [user_id], references: [id])
   user_id    String
+  type       CartItemType
 }
 
 model Item {
@@ -133,6 +138,11 @@ model Item {
   user        User        @relation(fields: [user_id], references: [id])
   user_id     String
   item_group  ItemGroup[]
+  cart        Cart[]
+  orders      Order[]
+  comments    Comment[]
+  ratings     Rating[]
+  is_deleted  Boolean     @default(false)
 }
 
 // prefer using this pattern in contrast to prisma many to many.
@@ -146,32 +156,43 @@ model ItemGroup {
 }
 
 model Product {
-  id          Int         @id @default(autoincrement())
-  title       String
-  excerpt     String
-  description String
-  price       Float
-  discount    Int         @default(0)
-  wishlist    Wishlist[]
-  cart        Cart[]
-  order       Order[]
-  category    Category[]
-  comments    Comment[]
-  rating      Rating[]
-  stock       Int
-  item_group  ItemGroup[]
-  user        User        @relation(fields: [user_id], references: [id])
-  user_id     String
-  created_at  DateTime    @default(now())
+  id             Int             @id @default(autoincrement())
+  title          String
+  excerpt        String
+  description    String
+  price          Float
+  discount       Int             @default(0)
+  wishlist       Wishlist[]
+  cart           Cart[]
+  order          Order[]
+  comments       Comment[]
+  ratings        Rating[]
+  stock          Int
+  item_group     ItemGroup[]
+  user           User            @relation(fields: [user_id], references: [id])
+  user_id        String
+  created_at     DateTime        @default(now())
+  category_group CategoryGroup[]
+  is_deleted     Boolean         @default(false)
+}
+
+model CategoryGroup {
+  id          Int      @id @default(autoincrement())
+  category    Category @relation(fields: [category_id], references: [id])
+  category_id Int
+  product     Product  @relation(fields: [product_id], references: [id])
+  product_id  Int
 }
 
 model Rating {
   id         Int     @id @default(autoincrement())
   user       User    @relation(fields: [user_id], references: [id])
   user_id    String
-  rating     Int
-  product    Product @relation(fields: [product_id], references: [id])
-  product_id Int
+  rating     Float
+  product    Product? @relation(fields: [product_id], references: [id])
+  product_id Int?
+  item       Item?    @relation(fields: [item_id], references: [id])
+  item_id    Int?
 }
 
 model Comment {
@@ -180,6 +201,8 @@ model Comment {
   user_id    String
   product    Product @relation(fields: [product_id], references: [id])
   product_id Int
+  item       Item    @relation(fields: [item_id], references: [id])
+  item_id    Int
 }
 
 model CardPayment {
@@ -197,6 +220,11 @@ model Images {
 model ImagesGroup {
   id Int @id @default(autoincrement())
   // first_name
+}
+
+enum CartItemType {
+  PRODUCT
+  ITEM
 }
 
 enum OrderStatus {

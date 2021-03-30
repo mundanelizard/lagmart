@@ -191,10 +191,13 @@ router.delete("/delete", mandatoryAuth, async (req, res) => {
       );
     }
 
-    await prisma.item.delete({
+    await prisma.item.update({
       where: {
         id: item_id,
       },
+      data: {
+        is_deleted: true
+      }
     });
 
     res.send({

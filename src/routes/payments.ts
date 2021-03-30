@@ -7,12 +7,20 @@ const router = express.Router();
 /* Get all user payments */
 router.get("/user", mandatoryAuth, async (req, res) => {
   try {
-    const user_id = req.auth?.id;
-
-    const orders = await prisma.invoice.findMany({
+    const invoices = await prisma.invoice.findMany({
       where: {
-        order: {},
+        order: {
+          order_group: {
+            user_id: req.auth?.id,
+          },
+        },
       },
+    });
+
+    res.send({
+      error: true,
+      data: invoices,
+      message: "Successfully retrieved all invoices for the user.",
     });
   } catch (error) {
     res.send({
@@ -23,11 +31,36 @@ router.get("/user", mandatoryAuth, async (req, res) => {
   }
 });
 
-/* Get all vendor payments */
-router.get("/vendor", mandatoryAuth, async (req, res) => {});
-
 /* Update vendor invoice payment */
-router.put("/invoice", mandatoryAuth, async (req, res) => {});
+router.put("/invoice", mandatoryAuth, async (req, res) => {
+  try {
+    const { invoice_id, vendor_payment_status } = req.body;
+    if (req.auth?.role !== "SUPER") {
+      throw new Error("Insufficient permission level.");
+    }
+
+    await prisma.invoice.update({
+      where: {
+        id: invoice_id,
+      },
+      data: {
+        vendor_payment_status,
+      },
+    });
+
+    res.send({
+      error: false,
+      message: "Successfully updated user vendor payment status.",
+      data: null,
+    });
+  } catch (error) {
+    res.send({
+      error: true,
+      message: error.message,
+      data: null,
+    });
+  }
+});
 
 /* Pending payments for all  */
 router.get("/pending", mandatoryAuth, async (req, res) => {
@@ -47,6 +80,7 @@ router.get("/pending", mandatoryAuth, async (req, res) => {
           order: {
             include: {
               product: true,
+              item: true,
             },
           },
         },
@@ -79,6 +113,7 @@ router.get("/fufilled", mandatoryAuth, async (req, res) => {
           order: {
             include: {
               product: true,
+              item: true,
             },
           },
         },
@@ -103,9 +138,18 @@ router.get("/vendor/pending", mandatoryAuth, async (req, res) => {
         where: {
           vendor_payment_status: "PAID",
           order: {
-            product: {
-              user_id: req.auth?.id,
-            },
+            OR: [
+              {
+                product: {
+                  user_id: req.auth?.id,
+                },
+              },
+              {
+                item: {
+                  user_id: req.auth?.id,
+                },
+              },
+            ],
           },
         },
         include: {
@@ -136,15 +180,25 @@ router.get("/vendor/fufilled", mandatoryAuth, async (req, res) => {
         where: {
           vendor_payment_status: "NOT_PAID",
           order: {
-            product: {
-              user_id: req.auth?.id,
-            },
+            OR: [
+              {
+                product: {
+                  user_id: req.auth?.id,
+                },
+              },
+              {
+                item: {
+                  user_id: req.auth?.id,
+                },
+              },
+            ],
           },
         },
         include: {
           order: {
             include: {
               product: true,
+              item: true,
             },
           },
         },

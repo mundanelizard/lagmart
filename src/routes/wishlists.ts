@@ -53,10 +53,14 @@ router.get("/:id", mandatoryAuth, async (req, res) => {
         include: {
           product: {
             include: {
-              rating: true,
+              ratings: true,
               wishlist: true,
               user: true,
-              category: true,
+              category_group: {
+                include: {
+                  category: true,
+                },
+              },
             },
           },
         },

@@ -13,12 +13,16 @@ const router = express.Router();
 router.get("/all", mandatoryAuth, async (req, res) => {
   try {
     const orders = await prisma.orderGroup.findMany({
+      where: {
+        user_id: req.auth?.id as string,
+      },
       include: {
         orders: {
           include: {
             product: true,
             order_group: true,
             invoice: true,
+            item: true,
           },
         },
       },
@@ -51,6 +55,7 @@ router.get("/vendor", mandatoryAuth, async (req, res) => {
             order_group: true,
             invoice: true,
             product: true,
+            item: true,
           },
         },
       },
@@ -79,7 +84,14 @@ router.get("/orders", mandatoryAuth, async (req, res) => {
 
     const orders = await prisma.orderGroup.findMany({
       include: {
-        orders: true,
+        orders: {
+          include: {
+            item: true,
+            product: true,
+            invoice: true,
+            order_group: true,
+          },
+        },
       },
     });
 
@@ -114,6 +126,7 @@ router.post("/order", mandatoryAuth, async (req, res) => {
       where: { user_id: req.auth?.id },
       include: {
         product: true,
+        item: true,
       },
     });
 
@@ -173,10 +186,11 @@ router.post("/order", mandatoryAuth, async (req, res) => {
       }
 
       // calculate the total
-      const total = cartItems.reduce(
-        (prev, item) => prev + item.quantity * item.product.price,
-        0
-      );
+      const total = cartItems.reduce((prev, item) => {
+        if (item.product) return prev + item.quantity * item.product.price;
+        else if (item.item) return prev + item.quantity * item.item.price;
+        return prev;
+      }, 0);
 
       // create a temp relation to keep track of payment
       const cardPayment = await prisma.cardPayment.create({
@@ -231,38 +245,62 @@ router.post("/order", mandatoryAuth, async (req, res) => {
       });
 
       // create an orders for cart items and link their invoice.
-      const orderPromises = cartItems.map((item) =>
-        prisma.order.create({
-          data: {
-            order_group_id: orderGroup.id,
-            product_id: item.product.id,
-            quantity: item.quantity,
-            status: "PENDING",
-            invoice: {
-              create: {
-                amount: item.quantity * item.product.price * discount,
-                payment_method: "CASH",
-                payment_status: "NOT_PAID",
+      const orderPromises = cartItems.map((item) => {
+        if (item.product) {
+          return prisma.order.create({
+            data: {
+              order_group_id: orderGroup.id,
+              product_id: item.product.id,
+              quantity: item.quantity,
+              status: "PENDING",
+              invoice: {
+                create: {
+                  amount: item.quantity * item.product.price * discount,
+                  payment_method: "CASH",
+                  payment_status: "NOT_PAID",
+                },
               },
             },
-          },
-        })
-      );
+          });
+        } else if (item.item) {
+          prisma.order.create({
+            data: {
+              order_group_id: orderGroup.id,
+              item_id: item.item.id,
+              quantity: item.quantity,
+              status: "PENDING",
+              invoice: {
+                create: {
+                  amount: item.quantity * item.item.price * discount,
+                  payment_method: "CASH",
+                  payment_status: "NOT_PAID",
+                },
+              },
+            },
+          });
+        }
+      });
 
       // update product stock quantities
-      const productPromises = cartItems.map((item) =>
-        prisma.product.update({
-          where: {
-            id: item.product.id,
-          },
-          data: {
-            stock:
-              item.product.stock - item.quantity >= 0
-                ? item.product.stock - item.quantity
-                : 0,
-          },
+      const productPromises = cartItems
+        .map((item) => {
+          if (item.product) {
+            return prisma.product.update({
+              where: {
+                id: item.product.id,
+              },
+              data: {
+                stock:
+                  item.product.stock - item.quantity >= 0
+                    ? item.product.stock - item.quantity
+                    : 0,
+              },
+            });
+          }
+
+          return null;
         })
-      );
+        .filter((i) => i);
 
       // Creates order and updates invoice.
       await Promise.all([...productPromises, ...orderPromises] as Array<
@@ -310,7 +348,7 @@ router.post("/verify", mandatoryAuth, async (req, res) => {
     });
 
     if (discountDetails) {
-      var discount = discountDetails.percent / 100
+      var discount = discountDetails.percent / 100;
     } else {
       var discount = 1;
     }
@@ -348,7 +386,7 @@ router.post("/verify", mandatoryAuth, async (req, res) => {
           status: "PENDING",
           invoice: {
             create: {
-              amount: (item.quantity * item.product.price) * discount,
+              amount: item.quantity * item.product.price * discount,
               payment_method: "CARD",
               payment_status: "PAID",
             },
@@ -410,13 +448,25 @@ router.put("/order", mandatoryAuth, async (req, res) => {
       include: {
         product: true,
         invoice: true,
+        item: true,
       },
     });
 
-    if (order?.product.user_id !== req.auth?.id && req.auth?.role !== "SUPER") {
-      throw Error(
-        "You don't have the right role or permission to update order status."
-      );
+    if (order?.product) {
+      if (
+        order?.product.user_id !== req.auth?.id &&
+        req.auth?.role !== "SUPER"
+      ) {
+        throw Error(
+          "You don't have the right role or permission to update order status."
+        );
+      }
+    } else if (order?.item) {
+      if (order?.item.user_id !== req.auth?.id && req.auth?.role !== "SUPER") {
+        throw Error(
+          "You don't have the right role or permission to update order status."
+        );
+      }
     }
 
     if (status === "FUFILLED") {
@@ -444,9 +494,11 @@ router.put("/order", mandatoryAuth, async (req, res) => {
       });
     }
 
-    // if user doesn't check if he is super
-    // update order if previous contraints were passed
-    // else return with an error.
+    res.send({
+      error: true,
+      message: "Sucessfully updated order status",
+      data: null,
+    });
   } catch (error) {
     res.send({
       error: true,
