@@ -2,7 +2,7 @@ import express from "express";
 import { mandatoryAuth } from "../middlewares/auth";
 import { CreateItemRequestBody, UpdateItemRequestBody } from "../types";
 import prisma from "../utilities/db";
-var router = express.Router();
+const router = express.Router();
 
 /* Get Items in user possession */
 router.get("/vendor", mandatoryAuth, async (req, res) => {
@@ -13,7 +13,7 @@ router.get("/vendor", mandatoryAuth, async (req, res) => {
       },
       include: {
         item_group: true,
-      }
+      },
     });
 
     res.send({
@@ -65,9 +65,13 @@ router.get("/search", async (req, res) => {
           {
             description: {
               contains: search,
+              mode: "insensitive",
             },
+          },
+          {
             title: {
               contains: search,
+              mode: "insensitive",
             },
           },
         ],
@@ -88,7 +92,7 @@ router.get("/search", async (req, res) => {
   }
 });
 
-/* GET a component. */
+/* GET an item. */
 router.get("/:id", async (req, res) => {
   try {
     const item_id = Number(req.params.id);
@@ -102,7 +106,11 @@ router.get("/:id", async (req, res) => {
         id: item_id,
       },
       include: {
-        item_group: true,
+        item_group: {
+          include: {
+            product: true
+          }
+        },
         user: true,
       },
     });
@@ -161,10 +169,10 @@ router.post("/create", mandatoryAuth, async (req, res) => {
   }
 });
 
-/** Deletes a component */
-router.delete("/delete", mandatoryAuth, async (req, res) => {
+/* Deletes a component */
+router.delete("/delete/:item_id", mandatoryAuth, async (req, res) => {
   try {
-    const item_id = Number(req.query.item_id);
+    const item_id = Number(req.params.item_id);
 
     if (!item_id) {
       throw new Error("Invalid item_id.");
@@ -196,8 +204,8 @@ router.delete("/delete", mandatoryAuth, async (req, res) => {
         id: item_id,
       },
       data: {
-        is_deleted: true
-      }
+        is_deleted: true,
+      },
     });
 
     res.send({
@@ -270,5 +278,7 @@ router.put("/update", mandatoryAuth, async (req, res) => {
     });
   }
 });
+
+// todo - add comments and rating
 
 export default router;

@@ -5,7 +5,8 @@ import { PORT, STATIC } from './utilities/config';
 
 import indexRouter from './routes/index';
 import usersRouter from './routes/users';
-import itemsRouter from './routes/items'
+import itemsRouter from './routes/items';
+import productsRouter from './routes/products'
 
 const app = express();
 
@@ -17,7 +18,8 @@ app.use(express.static(STATIC));
 
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
-app.use('/items', itemsRouter)
+app.use('/items', itemsRouter);
+app.use('/products', productsRouter);
 
 
 if (module.parent) {

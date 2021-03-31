@@ -1,8 +1,7 @@
 import express from "express";
-import { userInfo } from "node:os";
 import { mandatoryAuth } from "../middlewares/auth";
 import prisma from "../utilities/db";
-var router = express.Router();
+const router = express.Router();
 
 /* Get Product in user possession */
 router.get("/vendor", mandatoryAuth, async (req, res) => {
@@ -84,9 +83,13 @@ router.get("/search", async (req, res) => {
             description: {
               contains: search,
             },
+          },
+          {
             title: {
               contains: search,
             },
+          },
+          {
             excerpt: {
               contains: search,
             },
@@ -181,7 +184,7 @@ router.post("/create", mandatoryAuth, async (req, res) => {
     } = req.body;
 
     if (!Array.isArray(items) || items.length < 0) {
-      throw new Error("You can't create product with no length.");
+      throw new Error("You can't create product with no items.");
     } else if (typeof title !== "string" || !title) {
       throw new Error("You can't create a product with out a title.");
     } else if (typeof excerpt !== "string" || !excerpt) {
@@ -212,8 +215,8 @@ router.post("/create", mandatoryAuth, async (req, res) => {
     const itemGroupPromises = items.map((i) =>
       prisma.itemGroup.create({
         data: {
+          item_id: i,
           product_id: product.id,
-          item_id: i as number,
         },
       })
     );
@@ -237,7 +240,7 @@ router.post("/create", mandatoryAuth, async (req, res) => {
       data: product,
     });
   } catch (error) {
-    res.send({
+    res.status(400).send({
       error: true,
       message: error.message,
       data: null,
@@ -337,7 +340,7 @@ router.put("/update", mandatoryAuth, async (req, res) => {
       data: null,
     });
   } catch (error) {
-    res.send({
+    res.status(400).send({
       error: true,
       message: error.message,
       data: null,
@@ -346,32 +349,26 @@ router.put("/update", mandatoryAuth, async (req, res) => {
 });
 
 /* Delete product. */
-router.delete("/delete", mandatoryAuth, async (req, res) => {
+router.delete("/delete/:product_id", mandatoryAuth, async (req, res) => {
   try {
-    const product_id = Number(req.query.item_id);
+    const product_id = Number(req.params.product_id);
 
     if (!product_id) {
       throw new Error("Invalid product_id.");
     }
 
-    await prisma.product.delete({
+    await prisma.product.update({
       where: {
         id: product_id,
       },
-      include: {
-        item_group: true,
-      },
-    });
-
-    await prisma.itemGroup.deleteMany({
-      where: {
-        product_id,
+      data: {
+        is_deleted: true,
       },
     });
 
     res.send({
       error: false,
-      message: "Successfully cresate user.",
+      message: "Successfully deleted product.",
       data: null,
     });
   } catch (error) {
@@ -476,6 +473,7 @@ router.put("/rate", mandatoryAuth, async (req, res) => {
   }
 });
 
+// todo - fix this route
 /* Comment on product. */
 router.post("/comment", mandatoryAuth, async (req, res) => {});
 
@@ -483,6 +481,8 @@ router.post("/comment", mandatoryAuth, async (req, res) => {});
 router.post("/category", mandatoryAuth, async (req, res) => {
   try {
     const { category_name } = req.body;
+
+    console.log(req.auth?.role)
 
     if (typeof category_name !== "string" || !category_name) {
       throw new Error("Invalid category_name.");
@@ -567,7 +567,7 @@ router.delete("/category/:category_id", mandatoryAuth, async (req, res) => {
     res.send({
       data: null,
       error: false,
-      message: "Successfull created category.",
+      message: "Successfull deleted category.",
     });
   } catch (error) {
     res.send({

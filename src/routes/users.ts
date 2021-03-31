@@ -19,7 +19,7 @@ import { verify, sign } from "jsonwebtoken";
 const router = express.Router();
 
 /* GET users listing. */
-router.get("/:id", mandatoryAuth, async (req, res) => {
+router.get("/user/:id", mandatoryAuth, async (req, res) => {
   try {
     const user = await prisma.user.findFirst({
       where: {
@@ -45,6 +45,7 @@ router.get("/:id", mandatoryAuth, async (req, res) => {
         ratings: true,
         redeemed: true,
         wishlists: true,
+
       },
     });
 
@@ -198,7 +199,7 @@ router.post("/signin", optionalAuth, async (req, res) => {
 
     const user = await prisma.user.findUnique({
       where: {
-        email,
+        email: email.toLowerCase(),
       },
     });
 
@@ -207,14 +208,14 @@ router.post("/signin", optionalAuth, async (req, res) => {
     } else if (!(await compare(password, user.password))) {
       throw new Error("Wrong password.");
     } else if (user.status === "PENDING") {
-      await sendValidationMail(user.email, user.first_name);
+      await sendValidationMail(user.email, user.first_name, true);
       throw new Error(
         "Your account is hasn't been verified. A new verification email has been sent to you."
       );
     } else if (user.status === "DELETED") {
       await sendValidationMail(user.email, user.first_name);
       throw new Error(
-        "Your account has been deleted to active it, click on the verification email sent to you."
+        "Your account has been deleted to activate it, click on the verification email sent to you."
       );
     } else if (user.status === "INACTIVE") {
       throw new Error(
@@ -263,7 +264,8 @@ router.post("/signin", optionalAuth, async (req, res) => {
   }
 });
 
-router.post("refresh_token", async (req, res) => {
+/* Refreshes tokens */
+router.post("/refresh_token", async (req, res) => {
   try {
     const oldRefreshToken = req.cookies.refresh_token as string;
     const auth = verify(
@@ -271,10 +273,17 @@ router.post("refresh_token", async (req, res) => {
       REFRESH_TOKEN_SECRET as string
     ) as AuthObject;
 
-    const accessToken = sign(auth, ACCESS_TOKEN_SECRET as string, {
+    const newAuth = {
+      first_name: auth.first_name,
+      last_name: auth.last_name,
+      role: auth.role,
+      id: auth.id
+    }
+
+    const accessToken = sign(newAuth, ACCESS_TOKEN_SECRET as string, {
       expiresIn: "30m",
     });
-    const refreshToken = sign(auth, REFRESH_TOKEN_SECRET as string, {
+    const refreshToken = sign(newAuth, REFRESH_TOKEN_SECRET as string, {
       expiresIn: "30d",
     });
 
@@ -309,7 +318,7 @@ router.post("refresh_token", async (req, res) => {
       data: accessToken,
     });
   } catch (error) {
-    res.send({
+    res.status(400).send({
       message: error.message,
       error: true,
       data: null,
@@ -317,9 +326,14 @@ router.post("refresh_token", async (req, res) => {
   }
 });
 
-router.delete("/:id", mandatoryAuth, async (req, res) => {
+/* Deletes user */
+router.delete("/user/:id", mandatoryAuth, async (req, res) => {
   try {
     const id = String(req.params.id);
+
+    if (req.auth?.role !== "ADMIN" && req.auth?.id !== id) {
+      throw new Error("You don't have the right previledge to delete account.")
+    }
 
     await prisma.user.update({
       data: {
@@ -336,12 +350,14 @@ router.delete("/:id", mandatoryAuth, async (req, res) => {
       error: false,
     });
   } catch (error) {
-    res.send({
+    res.status(400).send({
       error: true,
       message: error.message,
       data: null,
     });
   }
 });
+
+// todo - update user details.
 
 export default router;

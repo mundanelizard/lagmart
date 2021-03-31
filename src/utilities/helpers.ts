@@ -26,9 +26,22 @@ export async function sendEmail(to: string, subject: string, htmlBody: string, t
   await mailer.send(msg)
 }
 
-export async function sendValidationMail(email: string, firstName: string) {
-  const userValidation = await db.userValidation.create({ data: { email } });
-  const validationLink = BASE_API  + "/users/validate?email=" + userValidation.email + "&id=" + userValidation.id
+export async function sendValidationMail(email: string, firstName: string, resend=false) {
+  if (!resend) {
+    const userValidation = await db.userValidation.create({ data: { email } });
+    var validationLink = BASE_API  + "/users/validate?email=" + userValidation.email + "&id=" + userValidation.id
+  } else {
+    const userValidation = await db.userValidation.findFirst({ where: { email } });
+    if (!userValidation) {
+      throw new Error("Not previous validation exists.")
+    }
+    var validationLink =
+      BASE_API +
+      "/users/validate?email=" +
+      userValidation.email +
+      "&id=" +
+      userValidation.id;
+  }
 
   const htmlBody = `
   <p>Hello ${firstName},</p>
