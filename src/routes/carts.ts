@@ -6,20 +6,25 @@ const router = express.Router();
 /* Get all orders made to a vendor */
 router.post("/add", mandatoryAuth, async (req, res) => {
   try {
-    const { product_id, quantity, type } = req.body;
+    const { product_id, quantity, item_id } = req.body;
 
-    if (!product_id || !quantity) {
-      throw new Error("Invalid product_id and quantity.");
+    if (product_id) {
+      var cart = await prisma.cart.create({
+        data: {
+          user_id: req.auth?.id as string,
+          product_id,
+          quantity,
+        },
+      });
+    } else {
+      var cart = await prisma.cart.create({
+        data: {
+          user_id: req.auth?.id as string,
+          quantity,
+          item_id,
+        },
+      });
     }
-
-    const cart = await prisma.cart.create({
-      data: {
-        user_id: req.auth?.id as string,
-        product_id,
-        quantity,
-        type
-      },
-    });
 
     res.send({
       error: false,
@@ -36,7 +41,7 @@ router.post("/add", mandatoryAuth, async (req, res) => {
 });
 
 /* Get all orders made on the platform -- admin only */
-router.get("/remove", mandatoryAuth, async (req, res) => {
+router.post("/remove", mandatoryAuth, async (req, res) => {
   try {
     const { cart_id } = req.body;
 
@@ -95,7 +100,7 @@ router.post("/update", mandatoryAuth, async (req, res) => {
 });
 
 /* Update orders mad */
-router.put("/clear", mandatoryAuth, async (req, res) => {
+router.post("/clear", mandatoryAuth, async (req, res) => {
   try {
     const cart = await prisma.cart.deleteMany({
       where: {

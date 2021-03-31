@@ -3,10 +3,10 @@ import logger from 'morgan'
 import express from 'express'
 import { PORT, STATIC } from './utilities/config';
 
-import indexRouter from './routes/index';
 import usersRouter from './routes/users';
 import itemsRouter from './routes/items';
 import productsRouter from './routes/products'
+import cartsRouter from './routes/carts'
 
 const app = express();
 
@@ -16,10 +16,10 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(STATIC));
 
-app.use('/', indexRouter);
 app.use('/users', usersRouter);
 app.use('/items', itemsRouter);
 app.use('/products', productsRouter);
+app.use('/cart', cartsRouter);
 
 
 if (module.parent) {

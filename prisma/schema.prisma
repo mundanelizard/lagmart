@@ -127,7 +127,6 @@ model Cart {
   quantity   Int
   user       User         @relation(fields: [user_id], references: [id])
   user_id    String
-  type       CartItemType
 }
 
 model Item {
@@ -220,11 +219,6 @@ model Images {
 model ImagesGroup {
   id Int @id @default(autoincrement())
   // first_name
-}
-
-enum CartItemType {
-  PRODUCT
-  ITEM
 }
 
 enum OrderStatus {
